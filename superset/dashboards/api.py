@@ -142,6 +142,7 @@ class DashboardRestApi(BaseSupersetModelRestApi):
         "add_favorite",
         "remove_favorite",
         "get_charts",
+        "get_charts_data",
         "get_datasets",
         "get_embedded",
         "set_embedded",
@@ -482,6 +483,79 @@ class DashboardRestApi(BaseSupersetModelRestApi):
             return self.response_403()
         except DashboardNotFoundError:
             return self.response_404()
+
+    @expose("/<id_or_slug>/charts_data", methods=("GET",))
+    @protect()
+    @etag_cache(
+        get_last_modified=lambda _self,
+            id_or_slug: DashboardDAO.get_dashboard_and_slices_changed_on(
+            id_or_slug
+        ),
+        max_age=0,
+        raise_for_access=lambda _self, id_or_slug: DashboardDAO.get_by_id_or_slug(
+            id_or_slug
+        ),
+        skip=lambda _self, id_or_slug: not is_feature_enabled("DASHBOARD_CACHE"),
+    )
+    @safe
+    @statsd_metrics
+    @event_logger.log_this_with_context(
+        action=lambda self, *args, **kwargs: f"{self.__class__.__name__}.get_charts_data",
+        log_to_statsd=False,
+    )
+    def get_charts_data(self, id_or_slug: str) -> Response:
+        """Get a dashboard's chart definitions.
+        ---
+        get:
+          summary: Get a dashboard's chart definitions.
+          parameters:
+          - in: path
+            schema:
+              type: string
+            name: id_or_slug
+          responses:
+            200:
+              description: Dashboard chart definitions
+              content:
+                application/json:
+                  schema:
+                    type: object
+                    properties:
+                      result:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ChartEntityResponseSchema'
+            400:
+              $ref: '#/components/responses/400'
+            401:
+              $ref: '#/components/responses/401'
+            403:
+              $ref: '#/components/responses/403'
+            404:
+              $ref: '#/components/responses/404'
+        """
+        try:
+            charts = DashboardDAO.get_charts_for_dashboard(id_or_slug)
+            result = []
+
+            for chart in charts:
+                result.append({
+                    "id": chart.id,
+                    "name": chart.slice_name,
+                    "slice_url": chart.slice_url,
+                    "description": chart.description,
+                    "description_markeddown": chart.description_markeddown,
+                    "viz_type": chart.form_data.get("viz_type"),
+                    "datasource": chart.form_data.get("datasource")
+                })
+
+            return self.response(200, result=result)
+        except DashboardAccessDeniedError:
+            return self.response_403()
+        except DashboardNotFoundError:
+            return self.response_404()
+
+
 
     @expose("/", methods=("POST",))
     @protect()

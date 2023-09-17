@@ -58,7 +58,7 @@ logger = logging.getLogger(__name__)
 
 
 class ChartDataRestApi(ChartRestApi):
-    include_route_methods = {"get_data", "data", "data_from_cache"}
+    include_route_methods = {"get_data", "data", "data_from_cache", "data_slim"}
 
     @expose("/<int:pk>/data/", methods=("GET",))
     @protect()
@@ -184,6 +184,89 @@ class ChartDataRestApi(ChartRestApi):
         """
         Take a query context constructed in the client and return payload
         data response for the given query
+        ---
+        post:
+          summary: Return payload data response for the given query
+          description: >-
+            Takes a query context constructed in the client and returns payload data
+            response for the given query.
+          requestBody:
+            description: >-
+              A query context consists of a datasource from which to fetch data
+              and one or many query objects.
+            required: true
+            content:
+              application/json:
+                schema:
+                  $ref: "#/components/schemas/ChartDataQueryContextSchema"
+          responses:
+            200:
+              description: Query result
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/ChartDataResponseSchema"
+            202:
+              description: Async job details
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/ChartDataAsyncResponseSchema"
+            400:
+              $ref: '#/components/responses/400'
+            401:
+              $ref: '#/components/responses/401'
+            500:
+              $ref: '#/components/responses/500'
+        """
+        json_body = None
+        if request.is_json:
+            json_body = request.json
+        elif request.form.get("form_data"):
+            # CSV export submits regular form data
+            with contextlib.suppress(TypeError, json.JSONDecodeError):
+                json_body = json.loads(request.form["form_data"])
+        if json_body is None:
+            return self.response_400(message=_("Request is not JSON"))
+
+        try:
+            query_context = self._create_query_context_from_form(json_body)
+            command = ChartDataCommand(query_context)
+            command.validate()
+        except DatasourceNotFound:
+            return self.response_404()
+        except QueryObjectValidationError as error:
+            return self.response_400(message=error.message)
+        except ValidationError as error:
+            return self.response_400(
+                message=_(
+                    "Request is incorrect: %(error)s", error=error.normalized_messages()
+                )
+            )
+
+        # TODO: support CSV, SQL query and other non-JSON types
+        if (
+            is_feature_enabled("GLOBAL_ASYNC_QUERIES")
+            and query_context.result_format == ChartDataResultFormat.JSON
+            and query_context.result_type == ChartDataResultType.FULL
+        ):
+            return self._run_async(json_body, command)
+
+        form_data = json_body.get("form_data")
+        return self._get_data_response(
+            command, form_data=form_data, datasource=query_context.datasource
+        )
+
+    @expose("/data_slim", methods=("POST",))
+    @protect()
+    @statsd_metrics
+    @event_logger.log_this_with_context(
+        action=lambda self, *args, **kwargs: f"{self.__class__.__name__}.data_slim",
+        log_to_statsd=False,
+    )
+    def data_slim(self) -> Response:
+        """
+        Take a query context constructed in the client and return payload  data response for the given query
         ---
         post:
           summary: Return payload data response for the given query
