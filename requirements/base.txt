@@ -71,7 +71,7 @@ cron-descriptor==1.2.24
     # via apache-superset
 croniter==1.0.15
     # via apache-superset
-cryptography==41.0.0
+cryptography==41.0.3
     # via
     #   apache-superset
     #   paramiko
@@ -368,3 +368,4 @@ zipp==3.15.0
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools
+setuptools>=65.5.1 # not directly required, pinned by Snyk to avoid a vulnerability
