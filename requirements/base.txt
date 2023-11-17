@@ -287,7 +287,7 @@ requests==2.31.0
     # via shillelagh
 rich==13.3.4
     # via flask-limiter
-selenium==3.141.0
+selenium==4.15.1
     # via apache-superset
 shillelagh==1.2.6
     # via apache-superset
