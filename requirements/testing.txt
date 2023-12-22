@@ -32,7 +32,7 @@ exceptiongroup==1.1.1
     # via pytest
 flask-testing==0.8.1
     # via -r requirements/testing.in
-fonttools==4.39.4
+fonttools==4.43.0
     # via matplotlib
 freezegun==1.2.2
     # via -r requirements/testing.in
