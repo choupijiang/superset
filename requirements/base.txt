@@ -332,7 +332,7 @@ typing-extensions==4.4.0
     #   shillelagh
 tzdata==2023.3
     # via pandas
-urllib3==1.26.6
+urllib3==1.26.19
     # via
     #   requests
     #   selenium
