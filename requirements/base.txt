@@ -35,7 +35,7 @@ cachelib==0.6.0
     # via flask-caching
 celery==5.2.2
     # via apache-superset
-certifi==2023.7.22
+certifi==2024.7.4
     # via requests
 cffi==1.15.1
     # via
