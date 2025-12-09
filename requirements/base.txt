@@ -318,7 +318,7 @@ sqlalchemy-utils==0.38.3
     # via
     #   apache-superset
     #   flask-appbuilder
-sqlparse==0.4.4
+sqlparse==0.5.4
     # via apache-superset
 sshtunnel==0.4.0
     # via apache-superset
@@ -332,7 +332,7 @@ typing-extensions==4.4.0
     #   shillelagh
 tzdata==2023.3
     # via pandas
-urllib3==1.26.6
+urllib3==2.6.0
     # via
     #   requests
     #   selenium
